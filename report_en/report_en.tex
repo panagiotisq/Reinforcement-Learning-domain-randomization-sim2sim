@@ -3,6 +3,7 @@
 \usepackage[a4paper,margin=2.5cm]{geometry}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
+\usepackage{microtype}
 \usepackage[hidelinks]{hyperref}
 \usepackage{booktabs}
 \usepackage{enumitem}
@@ -22,11 +23,6 @@
 \begin{center}
 \emph{Intelligent Control --- Course Project}
 \end{center}
-
-\vspace{0.3cm}
-\noindent\textit{This is an extended, English-language version of the original Greek course report
-(submitted June 22, 2025). It covers the same project and results, with additional derivations and
-clarifications added where the original left things informal.}
 
 \tableofcontents
 \newpage
@@ -158,7 +154,7 @@ The reward signal is a critical component for successfully training the agent, a
 behaviour towards the desired direction. The implemented reward function combines three main terms:
 
 \begin{description}
-  \item[Negative distance term.] The main driving term is the negative distance to the goal
+  \item[Negative distance term.] \sloppy The main driving term is the negative distance to the goal
   ($-\,\text{distance}$), which continuously encourages the agent to reduce its Euclidean distance to
   the destination. This term provides steady guidance towards the correct direction.
   \item[Directional alignment term.] To promote efficient navigation, the reward is boosted by a positive
@@ -178,9 +174,7 @@ r = -\,\lVert \mathbf{p}_{\text{goal}} - \mathbf{p}_{\text{agent}} \rVert
     \;+\; \mathbf{1}\!\left[\lVert \mathbf{p}_{\text{goal}} - \mathbf{p}_{\text{agent}} \rVert < \text{threshold}\right]\cdot 100 .
 \label{eq:reward}
 \end{equation}
-This closed form was not written out explicitly in the original report, which described the three terms
-only in words; Equation~\eqref{eq:reward} is added here for precision, and matches exactly what
-\texttt{compute\_reward} computes in \texttt{env.py}.
+Equation~\eqref{eq:reward} matches exactly what \texttt{compute\_reward} computes in \texttt{env.py}.
 
 \subsection{Agent--Environment Interaction}
 
@@ -266,11 +260,11 @@ the two action dimensions (\texttt{act\_dim}~$=2$). The Actor's output is used a
 distribution that models the policy's action. The Critic follows a similar structure, producing a single
 value representing the long-term expected return (the estimated value of the current state).
 
-\begin{equation}
-h = \tanh(W_1 o + b_1), \qquad
-\mu = W_{a2}\bigl(\tanh(W_{a1} h + b_{a1})\bigr) + b_{a2}, \qquad
-V(s) = W_{c2}\bigl(\tanh(W_{c1} h + b_{c1})\bigr) + b_{c2},
-\end{equation}
+\begin{align}
+h &= \tanh(W_1 o + b_1), \\
+\mu &= W_{a2}\bigl(\tanh(W_{a1} h + b_{a1})\bigr) + b_{a2}, \\
+V(s) &= W_{c2}\bigl(\tanh(W_{c1} h + b_{c1})\bigr) + b_{c2},
+\end{align}
 where $o\in\mathbb{R}^{4}$ is the observation, $h\in\mathbb{R}^{64}$ the shared representation, $\mu$ the
 mean of the action distribution and $V(s)$ the Critic's value estimate.
 
@@ -380,7 +374,7 @@ start:
 \hat{A}_t = \delta_t + \gamma\lambda(1-d_t)\,\hat{A}_{t+1}.
 \end{equation}
 Unrolling the recursion gives the equivalent, more commonly cited closed form as a weighted sum of future
-TD errors (added here as a complement to the recursive definition in the original report):
+TD errors:
 \begin{equation}
 \hat{A}_t = \sum_{l=0}^{T-t-1} (\gamma\lambda)^{l}\,\delta_{t+l}.
 \end{equation}
@@ -571,7 +565,7 @@ additional 100 epochs of training (200 vs.\ 100) translated into a tangible, mea
 zero-shot robustness (80\% $\to$ 100\% success, and a reduction in the final distance-to-goal spread
 across the successful runs).
 
-\section*{Limitations and possible improvements (added)}
+\section*{Limitations and Possible Improvements}
 \begin{itemize}[leftmargin=*]
   \item \textbf{Single landmark, infinite range.} As noted in Sec.~3.3, the ``LiDAR'' only ever senses
   the goal itself and the range check is never active in practice; a version with real obstacles and a
@@ -609,12 +603,11 @@ physical parameters, is enough to produce meaningfully robust zero-shot generali
   \emph{2017 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)} (pp.~23--30).
   \item Schulman, J., Wolski, F., Dhariwal, P., Radford, A., \& Klimov, O. (2017). \emph{Proximal Policy
   Optimization Algorithms}. arXiv preprint arXiv:1707.06347.
-  \href{https://arxiv.org/abs/1707.06347}{https://arxiv.org/abs/1707.06347}
+  \href{https://arxiv.org/abs/1707.06347}{arxiv.org/abs/1707.06347}
   \item Weng, L. (2018). Policy Gradient Algorithms.
   \href{https://lilianweng.github.io/posts/2018-04-08-policy-gradient/}{lilianweng.github.io/posts/2018-04-08-policy-gradient}
   \item Course lecture slides (Intelligent Control).
-  \item ChatGPT was used for supporting research while documenting this project (as noted in the original
-  Greek report).
+  \item ChatGPT was used for supporting research while documenting this project.
 \end{enumerate}
 
 \end{document}

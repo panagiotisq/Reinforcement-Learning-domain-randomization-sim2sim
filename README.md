@@ -12,11 +12,9 @@ generalization to dynamics it never saw during training.
 
 ## Report
 
-The full write-up is **[`report_en/report_en.pdf`](report_en/report_en.pdf)** (English). It covers the
+The full write-up is **[`report_en/report_en.pdf`](report_en/report_en.pdf)**. It covers the
 environment and reward design, the Actor–Critic architecture, the PPO/GAE math, and the training and
 zero-shot evaluation results, with all the original figures.
-
-The original report, in Greek, is still available at [`report.pdf`](report.pdf).
 
 ## Requirements
 
@@ -33,8 +31,7 @@ pip install -r requirements.txt
 | `main.py` | Runs the PPO training loop and the zero-shot evaluation. |
 | `env.py` | Defines the environment, sensors (simulated LiDAR), physics, and 3D visualization. |
 | `model.py` | Defines the Actor–Critic neural network architecture. |
-| `report_en/report_en.pdf` | Full project report (English). |
-| `report.pdf` | Original project report (Greek). |
+| `report_en/report_en.pdf` | Full project report. |
 | `requirements.txt` | Project dependencies. |
 
 ## How to Run
