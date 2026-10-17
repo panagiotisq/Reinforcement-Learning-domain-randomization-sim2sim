@@ -10,6 +10,8 @@
 \usepackage{caption}
 \usepackage{float}
 
+\newcommand{\impnote}[1]{\par\noindent\fcolorbox{gray}{gray!8}{\parbox{0.96\textwidth}{\small\textbf{Implementation note.} #1}}\par\vspace{4pt}}
+
 \title{\textbf{Domain Randomization for Sim-to-Sim Transfer}}
 \author{Panagiotis Kiousis \and Emmanouil Tsiknakis}
 \date{June 22, 2025}
@@ -134,6 +136,15 @@ measurements.
 For each landmark, if the distance is smaller than a maximum range (\texttt{max\_range}), the detection
 is recorded. The result is a list of detections, each containing the distance, the angle, and the ID of
 the corresponding landmark:
+
+\impnote{What the code actually does. \texttt{self.landmarks} is set to \texttt{[tuple(self.goal)]} — a
+single-element list — both in \texttt{reset()} and after. So, despite the general ``LiDAR scanning the
+surrounding space'' framing, this sensor never detects anything other than the goal itself; there are no
+other landmarks or obstacles to sense. Likewise, every call site (\texttt{reset()}, \texttt{step()}) calls
+\texttt{lidar(self.position, self.landmarks, noise\_std=0.01)} without passing \texttt{max\_range}, so it
+keeps the function's default, \texttt{max\_range=np.inf} — the range check described above is present in
+the code but, as actually used here, never excludes a detection. The sensor is therefore, in this project,
+equivalent to a noisy relative bearing-and-range sensor to the goal, not a general-purpose LiDAR.}
 \begin{align}
 d_{\text{noisy}} &= d + \mathcal{N}(0,\sigma^2) \\
 \theta_{\text{noisy}} &= \theta + \mathcal{N}(0,\sigma^2)
@@ -262,6 +273,16 @@ V(s) = W_{c2}\bigl(\tanh(W_{c1} h + b_{c1})\bigr) + b_{c2},
 \end{equation}
 where $o\in\mathbb{R}^{4}$ is the observation, $h\in\mathbb{R}^{64}$ the shared representation, $\mu$ the
 mean of the action distribution and $V(s)$ the Critic's value estimate.
+
+\impnote{\texttt{env.py} declares \texttt{self.observation\_space = spaces.Box(...)} with 6 bounds (it
+includes the agent's raw $(x,y)$ position and velocity-related bounds), so
+\texttt{env.observation\_space.shape[0]} is actually $6$, not $4$. \texttt{main.py} computes
+\texttt{obs\_dim = env.observation\_space.shape[0]} but then does not use that variable: it instantiates
+\texttt{ActorCritic(obs\_dim=4, act\_dim=2)} with a hardcoded $4$, which happens to match what
+\texttt{reset()}/\texttt{step()} actually return (Sec.~4.2) but not the environment's own declared
+observation space. This is a real inconsistency between the Gymnasium \texttt{observation\_space}
+contract and the actual observation shape; the network works because the hardcoded constant was set
+correctly by hand, not because the two are kept consistent in code.}
 
 \subsection{Observation Space}
 
@@ -394,6 +415,18 @@ The \textbf{PPO clipped objective} uses two versions of the surrogate loss:
 \text{surrogate}_2 &= \operatorname{clip}(\text{ratio},\, 1-\varepsilon,\, 1+\varepsilon)\cdot \hat{A}.
 \end{align}
 
+\impnote{Actions during rollout collection are sampled from $\mathcal{N}(\mu,\sigma_{\text{epoch}}^2)$
+with the annealed $\sigma_{\text{epoch}}$ of Sec.~5.2 (Eq.~8). When recomputing $\log\pi_{\text{new}}$
+for the ratio above, however, \texttt{main.py} builds the ``new'' distribution as
+\texttt{Normal(logits, torch.tensor(0.2))} --- a fixed standard deviation of $0.2$, independent of the
+epoch. Except at the one epoch where $\sigma_{\text{epoch}}=0.2$, the distribution used to \emph{act}
+and the distribution used to \emph{evaluate the action's new log-probability} are therefore not the same
+distribution, which is a slight inconsistency in how the importance ratio is defined (early on,
+$\sigma_{\text{epoch}}>0.2$ so $\pi_{\text{new}}$ is evaluated as narrower than the policy that actually
+acted; later, $\sigma_{\text{epoch}}<0.2$ and it is evaluated as wider). In practice this mainly affects
+the scale of the ratio rather than its sign, so training still worked, but using the same
+$\sigma_{\text{epoch}}$ in both places would be the more principled choice.}
+
 During training, the experience gathered from the rollout is shuffled randomly and split into mini-batches
 of size 64. The update is applied on each mini-batch and repeated 10 times per epoch to achieve stable
 convergence. In each such pass, three loss terms are computed:
@@ -475,6 +508,25 @@ After training, the best policy model is evaluated on 10 environments with rando
 assess zero-shot transfer. As shown in Figure~\ref{fig:zeroshot}, both policies perform quite well (a
 high success rate), with the second model, trained for 200 epochs, reaching a 100\% success rate.
 
+\impnote{What ``unseen'' actually means here. Each test environment is a fresh \texttt{Point2DEnv()},
+and \texttt{reset()} already randomizes mass ($\mathcal{U}(0.5,1.0)$), friction coefficient
+($\mathcal{U}(0,0.1)$) and the goal position on every call — this is the real source of the
+domain-randomization tested here. \texttt{main.py}'s test loop also contains commented-out lines meant
+to push these test environments to a wider, explicitly ``harder'' range
+(\texttt{test\_env.mass = np.random.uniform(1.8, 2.5)}, etc.), which would have made the test
+distribution genuinely different from, and wider than, the training distribution; as the code currently
+stands, those lines are disabled, so the 10 test episodes are drawn from \emph{the same} parameter
+distribution as training, not a distinct held-out one. ``Zero-shot'' here is accurate in the sense that
+the specific mass/friction/goal values of each test episode were not seen during training (they are
+freshly sampled), but the claim is weaker than ``generalizes beyond the training distribution'' would
+suggest. Separately, the success criterion also differs between training and testing:
+\texttt{env.py}'s \texttt{reset()} sets \texttt{self.threshold = 0.1} (used to flag an episode as a
+success \emph{during training}, Sec.~3.4), while the test loop in \texttt{main.py} uses
+\texttt{test\_threshold = 0.3} (three times as lenient) to decide the success/failure shown in
+Figure~\ref{fig:trajectories}. Re-enabling the wider test-time randomization, and/or re-testing with the
+stricter $0.1$ threshold, would be a natural next step to get a more demanding measure of
+generalization.}
+
 \begin{figure}[H]
   \centering
   \begin{minipage}{0.48\textwidth}
@@ -518,6 +570,25 @@ that domain randomization contributed substantially to the agent's generalizatio
 additional 100 epochs of training (200 vs.\ 100) translated into a tangible, measurable improvement in
 zero-shot robustness (80\% $\to$ 100\% success, and a reduction in the final distance-to-goal spread
 across the successful runs).
+
+\section*{Limitations and possible improvements (added)}
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Single landmark, infinite range.} As noted in Sec.~3.3, the ``LiDAR'' only ever senses
+  the goal itself and the range check is never active in practice; a version with real obstacles and a
+  finite sensing range would be a meaningfully different (and harder) problem.
+  \item \textbf{Test-time randomization range.} As noted in Sec.~6, the code to widen the test
+  distribution beyond the training distribution exists but is disabled, so the reported zero-shot
+  numbers test resampling, not out-of-distribution generalization in the stricter sense.
+  \item \textbf{\texttt{obs\_dim}/\texttt{observation\_space} mismatch.} The environment's declared
+  Gymnasium observation space (Sec.~4.1) does not match the observation actually returned; this works
+  only because the network's input size was hardcoded correctly by hand.
+  \item \textbf{Exploration/update std mismatch.} As noted in Sec.~5.5, the PPO update evaluates
+  log-probabilities under a fixed-std Normal rather than the same annealed std used to act, which is a
+  minor theoretical inconsistency in the importance-ratio computation.
+  \item \textbf{No obstacle avoidance or multi-goal setting.} The task is reduced to point-to-point
+  navigation with no obstacles between agent and goal; extending domain randomization to obstacle layout
+  (mentioned as a general possibility in Sec.~2) was not actually implemented.
+\end{itemize}
 
 \section{Conclusion}
 
