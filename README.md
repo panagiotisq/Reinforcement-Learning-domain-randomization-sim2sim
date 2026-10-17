@@ -1,43 +1,57 @@
+# Domain Randomization for Sim-to-Sim Transfer
 
-Domain Randomization for Sim-to-Sim Transfer
-
-(Reinforcement Learning project)
+*(Reinforcement Learning project — Intelligent Control course project, by Panagiotis Kiousis and
+Emmanouil Tsiknakis)*
 
 ![Preview](pic.png)
 
+A PPO-trained Actor–Critic agent learns to navigate a continuous 2D environment to a randomly placed
+goal, using a simulated LiDAR-type sensor. The environment's physical parameters (mass, friction) are
+randomized at every episode reset — domain randomization — so the policy is evaluated on its zero-shot
+generalization to dynamics it never saw during training.
 
+## Report
 
-Execution Guide
+The full write-up is **[`report_en/report_en.pdf`](report_en/report_en.pdf)** (English). It covers the
+environment and reward design, the Actor–Critic architecture, the PPO/GAE math, and the training and
+zero-shot evaluation results, with all the original figures.
 
+The original report, in Greek, is still available at [`report.pdf`](report.pdf).
 
-1. Requirements
+## Requirements
 
-Before running the project, install the required Python libraries with:
+Install the required Python libraries with:
+
+```bash
 pip install -r requirements.txt
+```
 
+## Files
 
-2. Files Description
+| File | Description |
+|---|---|
+| `main.py` | Runs the PPO training loop and the zero-shot evaluation. |
+| `env.py` | Defines the environment, sensors (simulated LiDAR), physics, and 3D visualization. |
+| `model.py` | Defines the Actor–Critic neural network architecture. |
+| `report_en/report_en.pdf` | Full project report (English). |
+| `report.pdf` | Original project report (Greek). |
+| `requirements.txt` | Project dependencies. |
 
-main.py – Executes the agent training process.
-env.py – Defines the environment, sensors, and visualization.
-model.py – Defines the Actor-Critic neural network architecture.
-report.pdf – Detailed project report.
-requirements.txt – Contains the necessary dependencies.
-README.txt – Basic project information.
+## How to Run
 
+To start training:
 
-3. How to Run
-
-To start training, run:
+```bash
 python main.py
+```
 
-During training, the console displays the reward progress per epoch.
-In the last 10% of the training, 3D visualization is enabled automatically.
+During training, the console prints the average reward per epoch. During the last 10% of training, the
+3D visualization is enabled automatically.
 
-4. Output
+## Output
 
 During training:
-The best policy model (state_dict) is saved automatically.
-Reward graphs are generated.
+- The best policy (its `state_dict`) is saved automatically whenever a new best average reward is found.
+- Reward-per-epoch plots are generated.
 
-After training completes, the agent is tested on new randomized environments (zero-shot evaluation).
+After training completes, the agent is evaluated on new, randomized environments (zero-shot evaluation).
